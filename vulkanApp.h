@@ -7,11 +7,11 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <vector>
+#include <optional>
 //vk 验证层一般是在调试模式下开启，在release模式下是关闭的
 const std::vector<const char *> validationLayers =
-{
-    "VK_LAYER_KHRONOS_validation"
-};
+    {
+        "VK_LAYER_KHRONOS_validation"};
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -27,23 +27,48 @@ public:
 
 private:
     void initWindow();
-    //vulkan functions 
+    //vulkan functions
     void initVulkan();
     void createInstance(); //createInsatnce,Insatnce是应用程序和Vulkan库之间的连接
     bool checkValidationLayerSupport();
-    std::vector<const char*> getRequiredExtensions();
-    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
+    std::vector<const char *> getRequiredExtensions();
+    void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
     void setupDebugMessenger();
     //render loop
     void mainLoop();
     //resources clean
     void cleanup();
+
+private:
+    //物理设备
+    struct QueueFamilyIndices
+    {
+        std::optional<uint32_t> graphicsFamily;
+
+        bool isComplete()
+        {
+            return graphicsFamily.has_value();
+        }
+    };
+    void pickPhysicalDevice();
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device);
+    //logic device and queues
+    //选择要使用的物理设备后，我们需要设置逻辑设备与它交互
+    void createLogicalDevice();
+
 private:
     GLFWwindow *m_vulkan_window;
     uint32_t m_width;
     uint32_t m_height;
     VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;
+    //physicalDevice
+    VkPhysicalDevice m_physicalDevice;
+    //logic device
+    VkDevice m_logicDevice;
+    VkQueue m_graphicsQueue;
+
 private:
     // 验证层 callback,
     //1.第一个参数指定消息的严重性，是以下标志：
@@ -62,10 +87,10 @@ private:
     //pObjects：与消息相关的Vulkan对象句柄数组
     //objectCount：数组中的对象数
     //4.最后，该pUserData参数包含在设置回调过程中指定的指针，并允许您将自己的数据传递给它。
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, 
-                VkDebugUtilsMessageTypeFlagsEXT messageType, 
-                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
-                void* pUserData) 
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                        VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                        const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+                                                        void *pUserData)
     {
         std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
         //回调返回一个布尔值，该布尔值指示是否应终止触发验证层消息的Vulkan调用。如果回调返回true，

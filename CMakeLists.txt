@@ -3,6 +3,10 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 14)
 project(vulkan-demo)
 SET(CMAKE_BUILD_TYPE Debug)
+#add_definitions(-std=c++11)
+set(CMAKE_CXX_STANDARD 17)
+#set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_CXX_EXTENSIONS OFF) # -std=c++11 instead of -std=gnu++11
 
 if(WIN32)
     MESSAGE(STATUS “This is windows.”)
