@@ -60,6 +60,7 @@ void VulkanApp::createInstance()
     {
         throw std::runtime_error("validation layers requested,but not available!");
     }
+
     VkApplicationInfo appInfo{};
     appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName = "vulkan app";
@@ -93,6 +94,7 @@ void VulkanApp::createInstance()
     
     if(vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
     {
+        //如果检查成功，则vkCreateInstance永远不会返回 VK_ERROR_LAYER_NOT_PRESENT错误，但是您应该运行该程序以确保成功。
         throw std::runtime_error("failed to create instance !");
     }
     //检查扩展支持
@@ -101,6 +103,11 @@ void VulkanApp::createInstance()
     std::cout << " support extensions count:"<< extensionCount<<std::endl;
     std::vector<VkExtensionProperties> instance_extensions(extensionCount);
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, instance_extensions.data());
+    std::cout << "available extensions ****************:\n";
+
+    for (const auto& extension : instance_extensions) {
+        std::cout << '\t' << extension.extensionName << '\n';
+    }
 }
 
 bool VulkanApp::checkValidationLayerSupport()
@@ -109,6 +116,7 @@ bool VulkanApp::checkValidationLayerSupport()
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+
     for (const char* layerName : validationLayers) 
     {
         bool layerFound = false;

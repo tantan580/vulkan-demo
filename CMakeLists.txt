@@ -13,19 +13,26 @@ if(WIN32)
     target_link_libraries(${PROJECT_NAME} glfw3 opengl32)
 else(WIN32)
     include_directories(./)
+    include_directories(./common)
     #find_package(glfw3 REQUIRED)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(DEPS REQUIRED glfw3 gdk-pixbuf-2.0 vulkan)
     include_directories(${DEPS_INCLUDE_DIRS})
     #add_definitions(-DNDEBUG)
-    file(GLOB project_file main.cpp vulkanApp.cpp)
+    #file(GLOB project_file main.cpp vulkanApp.cpp)
     #file(GLOB project_file main2.cpp)
-    add_executable(${PROJECT_NAME} ${project_file})
-    target_link_libraries(${PROJECT_NAME}
+
+    #add_executable(${PROJECT_NAME} ${project_file})
+
+    set(3rdparty
         ${DEPS_LIBRARIES}
+        #glfw3  #libglfw3.a
         -lGL
-        #-lm
         -lpthread
         -ldl
         )
+
+
+    add_subdirectory(example)
+    add_subdirectory(sample)
 endif()

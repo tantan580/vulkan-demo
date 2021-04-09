@@ -8,10 +8,10 @@
 #include <cstdlib>
 #include <vector>
 #include <optional>
-//vk 验证层一般是在调试模式下开启，在release模式下是关闭的
-const std::vector<const char *> validationLayers =
-    {
-        "VK_LAYER_KHRONOS_validation"};
+//vk 验证层一般是在调试模式下开启，在release模式下是关闭的，与扩展一样，验证层也需要通过指定其名称来启用
+const std::vector<const char *> validationLayers = {
+        "VK_LAYER_KHRONOS_validation"
+    };
 
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
@@ -30,7 +30,7 @@ private:
     //vulkan functions
     void initVulkan();
     void createInstance(); //createInsatnce,Insatnce是应用程序和Vulkan库之间的连接
-    bool checkValidationLayerSupport();
+    bool checkValidationLayerSupport();//用于检查所有请求的图层是否可用--验证层
     std::vector<const char *> getRequiredExtensions();
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
     void setupDebugMessenger();
