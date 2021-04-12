@@ -13,6 +13,10 @@ const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
     };
 
+const std::vector<const char *> deviceExtensions = {
+        VK_KHR_SWAPCHAIN_EXTENSION_NAME
+    };
+
 #ifdef NDEBUG
 const bool enableValidationLayers = false;
 #else
@@ -34,8 +38,10 @@ private:
     std::vector<const char *> getRequiredExtensions();
     void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT &createInfo);
     void setupDebugMessenger();
+    void createSurface();
     //render loop
     void mainLoop();
+    void drawFrame();
     //resources clean
     void cleanup();
 
@@ -44,19 +50,49 @@ private:
     struct QueueFamilyIndices
     {
         std::optional<uint32_t> graphicsFamily;
+        std::optional<uint32_t> presentFamily;
 
         bool isComplete()
         {
-            return graphicsFamily.has_value();
+            return graphicsFamily.has_value() && presentFamily.has_value();
         }
     };
+
     void pickPhysicalDevice();
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    int rateDeviceSuitability(VkPhysicalDevice device);//给查询到的显卡设备评分。
+
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);//对显卡设备查询支持的命令队列
     bool isDeviceSuitable(VkPhysicalDevice device);
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
     //logic device and queues
     //选择要使用的物理设备后，我们需要设置逻辑设备与它交互
     void createLogicalDevice();
 
+    //________Swap chain
+    void createSwapChain();
+    //交换链详细信息
+    struct SwapChainSupportDetails {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
+    //查询交换链支持的详细信息
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    //为交换链选择合适的表面格式
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    //交换范围是交换链图像的分辨率
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
+    void createIMageViews();
+    void createGraphicsPipeline();
+    VkShaderModule createShaderModule(const std::vector<char>& code);
+    void createRenderPass();
+    void createFramebuffers();
+
+    void createCommandPool();
+    void createCommandBuffers();
+    void createSemaphores();
 private:
     GLFWwindow *m_vulkan_window;
     uint32_t m_width;
@@ -64,11 +100,32 @@ private:
     VkInstance m_instance;
     VkDebugUtilsMessengerEXT m_debugMessenger;
     //physicalDevice
-    VkPhysicalDevice m_physicalDevice;
+    VkPhysicalDevice m_physicalDevice {VK_NULL_HANDLE};
     //logic device
-    VkDevice m_logicDevice;
+    VkDevice m_device;//逻辑设备句柄
     VkQueue m_graphicsQueue;
-
+    //window surface
+    VkSurfaceKHR m_surface;
+    VkQueue m_presentQueue;
+    //swap chain
+    VkSwapchainKHR m_swapChain;
+    std::vector<VkImage> m_swapChainImages;
+    VkFormat m_swapChainImageFormat;
+    VkExtent2D m_swapChainExtent;
+    //VkImageView
+    std::vector<VkImageView> m_swapChainImageViews;
+    //pipeline
+    VkRenderPass m_renderPass;
+    VkPipelineLayout m_pipelineLayout;
+    VkPipeline m_graphicsPipeline;
+    //framebuffers
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    //Command buffers
+    VkCommandPool m_commandPool;
+    std::vector<VkCommandBuffer> m_commandBuffers;
+    //semaphore
+    VkSemaphore m_imageAvailableSemaphore;//已获取图像并准备好进行渲染
+    VkSemaphore m_renderFinishedSemaphore;//已完成渲染并可以进行呈现
 private:
     // 验证层 callback,
     //1.第一个参数指定消息的严重性，是以下标志：
