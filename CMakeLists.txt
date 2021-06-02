@@ -33,6 +33,6 @@ else(WIN32)
         )
 
 
-    add_subdirectory(example)
+    #add_subdirectory(example)
     add_subdirectory(sample)
 endif()

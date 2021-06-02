@@ -49,8 +49,8 @@ private:
     //物理设备
     struct QueueFamilyIndices
     {
-        std::optional<uint32_t> graphicsFamily;
-        std::optional<uint32_t> presentFamily;
+        std::optional<uint32_t> graphicsFamily;//支持绘图命令的队列族
+        std::optional<uint32_t> presentFamily;//支持演示的队列族
 
         bool isComplete()
         {
@@ -103,7 +103,7 @@ private:
     VkPhysicalDevice m_physicalDevice {VK_NULL_HANDLE};
     //logic device
     VkDevice m_device;//逻辑设备句柄
-    VkQueue m_graphicsQueue;
+    VkQueue m_graphicsQueue;//图形队列句柄
     //window surface
     VkSurfaceKHR m_surface;
     VkQueue m_presentQueue;
