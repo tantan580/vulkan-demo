@@ -70,6 +70,8 @@ private:
 
     //________Swap chain
     void createSwapChain();
+    void recreateSwapChain();
+    void cleanupSwapChain();
     //交换链详细信息
     struct SwapChainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
@@ -92,21 +94,23 @@ private:
 
     void createCommandPool();
     void createCommandBuffers();
-    void createSemaphores();
+    void createSyncObjects();
 private:
     GLFWwindow *m_vulkan_window;
     uint32_t m_width;
     uint32_t m_height;
     VkInstance m_instance;
+
     VkDebugUtilsMessengerEXT m_debugMessenger;
+    //window surface
+    VkSurfaceKHR m_surface;
     //physicalDevice
     VkPhysicalDevice m_physicalDevice {VK_NULL_HANDLE};
     //logic device
     VkDevice m_device;//逻辑设备句柄
     VkQueue m_graphicsQueue;//图形队列句柄
-    //window surface
-    VkSurfaceKHR m_surface;
     VkQueue m_presentQueue;
+
     //swap chain
     VkSwapchainKHR m_swapChain;
     std::vector<VkImage> m_swapChainImages;
@@ -114,18 +118,25 @@ private:
     VkExtent2D m_swapChainExtent;
     //VkImageView
     std::vector<VkImageView> m_swapChainImageViews;
+    //framebuffers
+    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
     //pipeline
     VkRenderPass m_renderPass;
     VkPipelineLayout m_pipelineLayout;
     VkPipeline m_graphicsPipeline;
-    //framebuffers
-    std::vector<VkFramebuffer> m_swapChainFramebuffers;
+
     //Command buffers
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
-    //semaphore
-    VkSemaphore m_imageAvailableSemaphore;//已获取图像并准备好进行渲染
-    VkSemaphore m_renderFinishedSemaphore;//已完成渲染并可以进行呈现
+    //semaphores
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;//已获取图像并准备好进行渲染
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;//已完成渲染并可以进行呈现
+    std::vector<VkFence> m_inFlightFences;
+    std::vector<VkFence> m_imagesInFlight;
+    size_t m_currentFrame = 0;
+public:
+    bool m_framebufferResized {false};//许多驱动程序和平台会VK_ERROR_OUT_OF_DATE_KHR在窗口大小调整后自动触发，但并不能保证一定会发生
 private:
     // 验证层 callback,
     //1.第一个参数指定消息的严重性，是以下标志：

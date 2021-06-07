@@ -3,15 +3,14 @@
 #include <set>
 #include <cstring>
 
+const int MAX_FRAMES_IN_FLIGHT = 2;
+
 VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) 
 {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr) 
-    {
+    if (func != nullptr) {
         return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-    } 
-    else 
-    {
+    } else {
         return VK_ERROR_EXTENSION_NOT_PRESENT;
     }
 }
@@ -19,9 +18,15 @@ VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMes
 void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) 
 {
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    if (func != nullptr) 
-    {
+    if (func != nullptr) {
         func(instance, debugMessenger, pAllocator);
+    }
+}
+
+static void framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    auto app = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
+    if (app) {
+        app->m_framebufferResized = true;
     }
 }
 
@@ -42,8 +47,10 @@ void VulkanApp::initWindow()
 {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API,GLFW_NO_API);//我们需要告诉它不要通过后续调用来创建OpenGL上下文
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);//禁用窗口调整大小
+    //glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);//禁用窗口调整大小
     m_vulkan_window = glfwCreateWindow(m_width, m_height, "Vulkan", nullptr, nullptr);
+    glfwSetWindowUserPointer(m_vulkan_window, this);
+    glfwSetFramebufferSizeCallback(m_vulkan_window, framebufferResizeCallback);
 }
 
 void VulkanApp::initVulkan()
@@ -62,14 +69,13 @@ void VulkanApp::initVulkan()
     createFramebuffers();
     createCommandPool();
     createCommandBuffers();
-    createSemaphores();
+    createSyncObjects();
 }
 
 void VulkanApp::createInstance()
 {
-    if(enableValidationLayers && !checkValidationLayerSupport())
-    {
-        throw std::runtime_error("validation layers requested,but not available!");
+    if (enableValidationLayers && !checkValidationLayerSupport()) {
+        throw std::runtime_error("validation layers requested, but not available!");
     }
 
     VkApplicationInfo appInfo{};
@@ -90,25 +96,22 @@ void VulkanApp::createInstance()
     createInfo.ppEnabledExtensionNames = extensions.data();
 
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo;
-    if(enableValidationLayers)//最后，修改VkInstanceCreateInfo结构实例以包括验证层名称（如果已启用）：
-    {
+    if (enableValidationLayers) {//最后，修改VkInstanceCreateInfo结构实例以包括验证层名称（如果已启用）：
         createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
         createInfo.ppEnabledLayerNames = validationLayers.data();
         populateDebugMessengerCreateInfo(debugCreateInfo);
         //一个附加的调试工具，它将在调试过程中自动使用vkCreateInstance并vkDestroyInstance在此之后进行清理。
-        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo;
-    }
-    else
-    {
+        createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*) &debugCreateInfo;
+    } else {
         createInfo.enabledLayerCount = 0;
         createInfo.pNext = nullptr;
     }
     
-    if(vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS)
-    {
+    if (vkCreateInstance(&createInfo, nullptr, &m_instance) != VK_SUCCESS) {
         //如果检查成功，则vkCreateInstance永远不会返回 VK_ERROR_LAYER_NOT_PRESENT错误，但是您应该运行该程序以确保成功。
         throw std::runtime_error("failed to create instance !");
     }
+
     //检查扩展支持
     uint32_t extensionCount = 0;
     vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
@@ -120,6 +123,7 @@ void VulkanApp::createInstance()
     for (const auto& extension : instance_extensions) {
         std::cout << '\t' << extension.extensionName << '\n';
     }
+        return;
 }
 
 bool VulkanApp::checkValidationLayerSupport()
@@ -169,14 +173,8 @@ void VulkanApp::populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfo
 {
     createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-
-    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT
-            | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-
+    createInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    createInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
     createInfo.pfnUserCallback = debugCallback;//tell vulkan callback function
     createInfo.pUserData = nullptr; // Optional
 }
@@ -188,8 +186,7 @@ void VulkanApp::setupDebugMessenger()
     VkDebugUtilsMessengerCreateInfoEXT createInfo;
     populateDebugMessengerCreateInfo(createInfo);
 
-    if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) 
-    {
+    if (CreateDebugUtilsMessengerEXT(m_instance, &createInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
         throw std::runtime_error("failed to set up debug messenger!");
     }
 }
@@ -208,18 +205,35 @@ void VulkanApp::mainLoop()
         glfwPollEvents();
         drawFrame();
     }
-    //vkDeviceWaitIdle(m_device);
+    vkDeviceWaitIdle(m_device);
 }
 
 void VulkanApp::drawFrame()
 {
+    vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
+
     uint32_t imageIndex;//可用的交换链图像的索引--m_swapChainImages
-    vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
-    //提交命令缓冲区
+    VkResult result = vkAcquireNextImageKHR(m_device, m_swapChain, UINT64_MAX, m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE, &imageIndex);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized) {
+        m_framebufferResized = false;
+        recreateSwapChain();
+        return;
+    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+    // Check if a previous frame is using this image (i.e. there is its fence to wait on)
+    if (m_imagesInFlight[imageIndex] != VK_NULL_HANDLE) {
+        vkWaitForFences(m_device, 1, &m_imagesInFlight[imageIndex], VK_TRUE, UINT64_MAX);
+    }
+    // Mark the image as now being in use by this frame
+    m_imagesInFlight[imageIndex] = m_inFlightFences[m_currentFrame];
+
+    //提交命令缓冲区--用该图像作为帧缓冲中的附件来执行命令缓冲
     VkSubmitInfo submitInfo {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphore};
+    VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphores[m_currentFrame]};
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
@@ -227,35 +241,58 @@ void VulkanApp::drawFrame()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &m_commandBuffers[imageIndex];
 
-    VkSemaphore signalSemaphores[] = {m_renderFinishedSemaphore};
+    VkSemaphore signalSemaphores[] = {m_renderFinishedSemaphores[m_currentFrame]};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
+
+    if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
+
+    VkPresentInfoKHR presentInfo{};
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = signalSemaphores;
+
+    VkSwapchainKHR swapChains[] = {m_swapChain};
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = swapChains;
+    presentInfo.pImageIndices = &imageIndex;
+    presentInfo.pResults = nullptr; // Optional
+    //将图像返回给交换链以便呈现
+    vkQueuePresentKHR(m_presentQueue, &presentInfo);
+
+    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void VulkanApp::cleanup()
 {
-    vkDestroySemaphore(m_device, m_renderFinishedSemaphore, nullptr);
-    vkDestroySemaphore(m_device, m_imageAvailableSemaphore, nullptr);
+    cleanupSwapChain();
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        vkDestroySemaphore(m_device, m_renderFinishedSemaphores[i], nullptr);
+        vkDestroySemaphore(m_device, m_imageAvailableSemaphores[i], nullptr);
+        vkDestroyFence(m_device, m_inFlightFences[i], nullptr);
+    }
 
     vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
-    for (auto framebuffer : m_swapChainFramebuffers) {
-        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
-    }
+//    for (auto framebuffer : m_swapChainFramebuffers) {
+//        vkDestroyFramebuffer(m_device, framebuffer, nullptr);
+//    }
 
-    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
-    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+//    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+//    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+//    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
 
-    for (auto imageView : m_swapChainImageViews) {
-        vkDestroyImageView(m_device, imageView, nullptr);
-    }
+//    for (auto imageView : m_swapChainImageViews) {
+//        vkDestroyImageView(m_device, imageView, nullptr);
+//    }
 
-    vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
+//    vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
     vkDestroyDevice(m_device,nullptr);
 
     if (enableValidationLayers) {
@@ -393,6 +430,8 @@ void VulkanApp::createLogicalDevice()
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
+    std::cout<<"------"<<indices.graphicsFamily.value()<<":present:"<<indices.presentFamily.value()<<std::endl;
+
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies) {
         VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -487,6 +526,46 @@ void VulkanApp::createSwapChain()
 
     m_swapChainImageFormat = surfaceFormat.format;
     m_swapChainExtent = extent;
+}
+
+void VulkanApp::recreateSwapChain()
+{
+    int width = 0, height = 0;
+    glfwGetFramebufferSize(m_vulkan_window, &width, &height);
+    while (width == 0 || height == 0) {
+        glfwGetFramebufferSize(m_vulkan_window, &width, &height);
+        glfwWaitEvents();
+    }
+    //在某些情况下，它还不能正确处理。窗口表面可能会发生变化，以致交换链不再与其兼容,比如窗口大小发生变化时，我们需要重新创建交换链
+    vkDeviceWaitIdle(m_device);//等待设备空闲
+
+    cleanupSwapChain();
+
+    createSwapChain();
+    createIMageViews();
+    createRenderPass();
+    createGraphicsPipeline();
+    createFramebuffers();
+    createCommandBuffers();
+}
+
+void VulkanApp::cleanupSwapChain()
+{
+    for (size_t i = 0; i < m_swapChainFramebuffers.size(); i++) {
+        vkDestroyFramebuffer(m_device, m_swapChainFramebuffers[i], nullptr);
+    }
+
+    vkFreeCommandBuffers(m_device, m_commandPool, static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
+
+    vkDestroyPipeline(m_device, m_graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+    vkDestroyRenderPass(m_device, m_renderPass, nullptr);
+
+    for (size_t i = 0; i < m_swapChainImageViews.size(); i++) {
+        vkDestroyImageView(m_device, m_swapChainImageViews[i], nullptr);
+    }
+
+    vkDestroySwapchainKHR(m_device, m_swapChain, nullptr);
 }
 
 VulkanApp::SwapChainSupportDetails VulkanApp::querySwapChainSupport(VkPhysicalDevice device)
@@ -685,6 +764,7 @@ void VulkanApp::createGraphicsPipeline()
     //uniform
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     pipelineLayoutInfo.setLayoutCount = 0; // Optional
     pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
     pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
@@ -757,6 +837,15 @@ void VulkanApp::createRenderPass()
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+
+    //subpass dep
+    VkSubpassDependency dependency{};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     //
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -764,6 +853,8 @@ void VulkanApp::createRenderPass()
     renderPassInfo.pAttachments = &colorAttachment;
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
+    renderPassInfo.dependencyCount = 1;
+    renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(m_device, &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
         throw std::runtime_error("failed to create render pass!");
@@ -854,13 +945,27 @@ void VulkanApp::createCommandBuffers()
     }
 }
 
-void VulkanApp::createSemaphores()
+void VulkanApp::createSyncObjects()
 {
-    VkSemaphoreCreateInfo semaphoreInfo{};
+    m_imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
+    m_inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
+    m_imagesInFlight.resize(m_swapChainImages.size(), VK_NULL_HANDLE);
+
+    VkSemaphoreCreateInfo semaphoreInfo {};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphore) != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to create semaphores!");
+
+    VkFenceCreateInfo fenceInfo {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        if (vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]) != VK_SUCCESS ||
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]) != VK_SUCCESS ||
+            vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]) != VK_SUCCESS) {
+
+               throw std::runtime_error("failed to create semaphores for a frame!");
+         }
     }
+
 }
