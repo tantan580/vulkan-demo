@@ -8,6 +8,7 @@
 #include <cstdlib>
 #include <vector>
 #include <optional>
+//#define NDEBUG
 //vk 验证层一般是在调试模式下开启，在release模式下是关闭的，与扩展一样，验证层也需要通过指定其名称来启用
 const std::vector<const char *> validationLayers = {
         "VK_LAYER_KHRONOS_validation"
@@ -93,6 +94,10 @@ private:
     void createFramebuffers();
 
     void createCommandPool();
+
+    void createVertexBuffer();
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
     void createCommandBuffers();
     void createSyncObjects();
 private:
@@ -128,6 +133,10 @@ private:
 
     //Command buffers
     VkCommandPool m_commandPool;
+
+    VkBuffer m_vertexBuffer;
+    VkDeviceMemory m_vertexBufferMemory;
+
     std::vector<VkCommandBuffer> m_commandBuffers;
     //semaphores
     std::vector<VkSemaphore> m_imageAvailableSemaphores;//已获取图像并准备好进行渲染
