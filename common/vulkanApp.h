@@ -97,8 +97,13 @@ private:
 
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+    void createDescriptorSetLayout();//uniform buffer object
     void createVertexBuffer();
     void createIndexBuffer();
+    void createUniformBuffers();
+    void createDescriptorPool();
+    void createDescriptorSets();
+    void updateUniformBuffer(uint32_t currentImage);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     void createCommandBuffers();
@@ -131,18 +136,27 @@ private:
 
     //pipeline
     VkRenderPass m_renderPass;
+
+    VkDescriptorSetLayout m_descriptorSetLayout;
+    VkDescriptorPool m_descriptorPool;
+    std::vector<VkDescriptorSet> m_descriptorSets;
     VkPipelineLayout m_pipelineLayout;
+
     VkPipeline m_graphicsPipeline;
 
     //Command buffers
     VkCommandPool m_commandPool;
+    std::vector<VkCommandBuffer> m_commandBuffers;
 
+    //buffer paras
     VkBuffer m_vertexBuffer;
     VkDeviceMemory m_vertexBufferMemory;
     VkBuffer m_indexBuffer;
     VkDeviceMemory m_indexBufferMemory;
 
-    std::vector<VkCommandBuffer> m_commandBuffers;
+    std::vector<VkBuffer> m_uniformBuffers;
+    std::vector<VkDeviceMemory> m_uniformBuffersMemory;
+
     //semaphores
     std::vector<VkSemaphore> m_imageAvailableSemaphores;//已获取图像并准备好进行渲染
     std::vector<VkSemaphore> m_renderFinishedSemaphores;//已完成渲染并可以进行呈现
