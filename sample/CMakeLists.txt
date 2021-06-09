@@ -1,2 +1,2 @@
-add_executable(init main.cpp ../common/vulkanApp.cpp)
-target_link_libraries(init  ${3rdparty})
+add_executable(vulkan main.cpp ../common/vulkanApp.cpp)
+target_link_libraries(vulkan  ${3rdparty})

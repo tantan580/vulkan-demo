@@ -87,7 +87,8 @@ private:
     //交换范围是交换链图像的分辨率
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-    void createIMageViews();
+    VkImageView createImageView(VkImage image, VkFormat format);
+    void createImageViews();
     void createGraphicsPipeline();
     VkShaderModule createShaderModule(const std::vector<char>& code);
     void createRenderPass();
@@ -98,6 +99,14 @@ private:
     void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
     void createDescriptorSetLayout();//uniform buffer object
+
+    void createTextureImage();
+    void createTextureImageView();
+    void createTextureSampler();
+    void createImage(uint32_t width, uint32_t height, VkFormat format, VkImageTiling tiling, VkImageUsageFlags usage, VkMemoryPropertyFlags properties, VkImage& image, VkDeviceMemory& imageMemory);
+    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height);
+
     void createVertexBuffer();
     void createIndexBuffer();
     void createUniformBuffers();
@@ -106,6 +115,9 @@ private:
     void updateUniformBuffer(uint32_t currentImage);
     uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
+    //command buffer
+    VkCommandBuffer beginSingleCommands();
+    void endSingleCommands(VkCommandBuffer commandBuffer);
     void createCommandBuffers();
     void createSyncObjects();
 private:
@@ -131,6 +143,7 @@ private:
     VkExtent2D m_swapChainExtent;
     //VkImageView
     std::vector<VkImageView> m_swapChainImageViews;
+    VkImageView m_textureImageView;
     //framebuffers
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
@@ -148,11 +161,17 @@ private:
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
+    //texture buffer
+    VkImage m_textureImage;
+    VkDeviceMemory m_textureImageMemory;
+    VkSampler m_textureSampler;
+
     //buffer paras
     VkBuffer m_vertexBuffer;
     VkDeviceMemory m_vertexBufferMemory;
     VkBuffer m_indexBuffer;
     VkDeviceMemory m_indexBufferMemory;
+
 
     std::vector<VkBuffer> m_uniformBuffers;
     std::vector<VkDeviceMemory> m_uniformBuffersMemory;
