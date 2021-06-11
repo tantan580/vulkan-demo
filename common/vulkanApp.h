@@ -87,11 +87,16 @@ private:
     //交换范围是交换链图像的分辨率
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
-    VkImageView createImageView(VkImage image, VkFormat format);
+    VkImageView createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags);
     void createImageViews();
     void createGraphicsPipeline();
     VkShaderModule createShaderModule(const std::vector<char>& code);
     void createRenderPass();
+    void createDepthResources();
+    VkFormat findSupportedFormat(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+    VkFormat findDepthFormat();
+    bool hasStencilComponent(VkFormat format);
+
     void createFramebuffers();
 
     void createCommandPool();
@@ -143,7 +148,6 @@ private:
     VkExtent2D m_swapChainExtent;
     //VkImageView
     std::vector<VkImageView> m_swapChainImageViews;
-    VkImageView m_textureImageView;
     //framebuffers
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
 
@@ -161,9 +165,15 @@ private:
     VkCommandPool m_commandPool;
     std::vector<VkCommandBuffer> m_commandBuffers;
 
+    //depth buffer
+    VkImage m_depthImage;
+    VkDeviceMemory m_depthImageMemory;
+    VkImageView m_depthImageView;
+
     //texture buffer
     VkImage m_textureImage;
     VkDeviceMemory m_textureImageMemory;
+    VkImageView m_textureImageView;
     VkSampler m_textureSampler;
 
     //buffer paras
